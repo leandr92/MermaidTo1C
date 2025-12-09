@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mermaid Схемы (Транспилировано для 1С)</title>
+    <style>
+/* Базовые стили для Mermaid диаграмм */
+.mermaid {
+  font-family: "trebuchet ms", verdana, arial, sans-serif;
+  font-size: 16px;
+  fill: #333;
+}
+
+.mermaid .label {
+  font-family: "trebuchet ms", verdana, arial, sans-serif;
+  color: #333;
+}
+
+.mermaid .node rect,
+.mermaid .node circle,
+.mermaid .node ellipse,
+.mermaid .node polygon {
+  fill: #ECECFF;
+  stroke: #9370DB;
+  stroke-width: 1px;
+}
+
+.mermaid .node .label {
+  text-align: center;
+}
+
+.mermaid .edgePath .path {
+  stroke: #333333;
+  stroke-width: 1.5px;
+}
+
+.mermaid .edgeLabel {
+  background-color: #e8e8e8;
+  text-align: center;
+}
+
+.mermaid .cluster rect {
+  fill: #ffffde;
+  stroke: #aaaa33;
+  stroke-width: 1px;
+}
+
+.mermaid .cluster text {
+  fill: #333;
+}
+
+.mermaid .actor {
+  stroke: #CCCCFF;
+  fill: #ECECFF;
+}
+
+.mermaid text.actor {
+  fill: #000;
+  stroke: none;
+}
+
+.mermaid .actor-line {
+  stroke: grey;
+}
+
+.mermaid .messageLine0 {
+  stroke-width: 1.5;
+  stroke-dasharray: "2 2";
+  marker-end: "url(#arrowhead)";
+  stroke: #333;
+}
+
+.mermaid .messageLine1 {
+  stroke-width: 1.5;
+  stroke-dasharray: "2 2";
+  stroke: #333;
+}
+
+.mermaid #arrowhead {
+  fill: #333;
+}
+
+.mermaid .sequenceNumber {
+  fill: #fff;
+}
+
+.mermaid .note {
+  fill: #fff5ad;
+  stroke: #aaa;
+}
+
+.mermaid .note .label {
+  fill: #000;
+}
+
+.mermaid .activation0 {
+  fill: #f4f4f4;
+  stroke: #666;
+}
+
+.mermaid .activation1 {
+  fill: #f4f4f4;
+  stroke: #666;
+}
+
+.mermaid .activation2 {
+  fill: #f4f4f4;
+  stroke: #666;
+}
+    </style>
+</head>
+<body>
+    <h1>Mermaid Схемы</h1>
+    
+    <div id="mermaid-container">
+        <!-- Основная диаграмма с кириллицей -->
+        <pre class="mermaid">graph TD
+A[Клиент] --> B[Балансировщик нагрузки]
+B --> C[Сервер1]
+B --> D[Сервер2]
+C --> E[База данных]
+D --> E</pre>
+
+        <pre class="mermaid">sequenceDiagram
+participant Alice
+participant Bob
+Alice->>Bob: Hello Bob, how are you?
+Bob-->>Alice: I am good thanks!</pre>
+    </div>
+
+    <!-- Критически важные полифиллы - должны быть ДО загрузки mermaid -->
+    <script>
+        // Полифилл для Object.hasOwn (ES2022) - устанавливается ДО загрузки mermaid
+        if (typeof Object.hasOwn === 'undefined') {
+            Object.hasOwn = function(obj, prop) {
+                return Object.prototype.hasOwnProperty.call(obj, prop);
+            };
+        }
+        
+        // Полифилл для Array.prototype.at() (ES2022) - критически важен для Mermaid 11.x
+        if (!Array.prototype.at) {
+            Array.prototype.at = function(index) {
+                var len = this.length;
+                var relativeIndex = index >= 0 ? index : len + index;
+                if (relativeIndex < 0 || relativeIndex >= len) {
+                    return undefined;
+                }
+                return this[relativeIndex];
+            };
+        }
+        
+        // Полифилл для SVGElement.getBBox() - критически важен для Mermaid в старых браузерах
+        // Работает для всех SVG элементов, включая те, что возвращаются через D3 .node()
+        (function() {
+            function getBBoxPolyfill() {
+                var element = this;
+                
+                // Если это D3 элемент с методом node(), получаем нативный элемент
+                if (element && typeof element.node === 'function') {
+                    element = element.node();
+                }
+                
+                // Если элемент null или undefined, возвращаем значения по умолчанию
+                if (!element) {
+                    return { x: 0, y: 0, width: 100, height: 100 };
+                }
+                
+                // Пробуем использовать нативный getBBox, если доступен
+                if (element.getBBox && typeof element.getBBox === 'function') {
+                    try {
+                        return element.getBBox();
+                    } catch (e) {
+                        // Если getBBox выбросил ошибку, вычисляем вручную
+                    }
+                }
+                
+                // Вычисляем bounding box вручную
+                var bbox = {
+                    x: 0,
+                    y: 0,
+                    width: 0,
+                    height: 0
+                };
+                
+                try {
+                    // Пробуем получить через getBoundingClientRect
+                    if (element.getBoundingClientRect) {
+                        var rect = element.getBoundingClientRect();
+                        bbox.width = rect.width || 0;
+                        bbox.height = rect.height || 0;
+                    }
+                    
+                    // Пробуем получить атрибуты width и height
+                    if (element.getAttribute) {
+                        var width = element.getAttribute('width');
+                        var height = element.getAttribute('height');
+                        if (width) {
+                            bbox.width = parseFloat(width) || bbox.width;
+                        }
+                        if (height) {
+                            bbox.height = parseFloat(height) || bbox.height;
+                        }
+                    }
+                    
+                    // Пробуем получить через style
+                    if (element.style) {
+                        var styleWidth = element.style.width;
+                        var styleHeight = element.style.height;
+                        if (styleWidth) {
+                            bbox.width = parseFloat(styleWidth) || bbox.width;
+                        }
+                        if (styleHeight) {
+                            bbox.height = parseFloat(styleHeight) || bbox.height;
+                        }
+                    }
+                    
+                    // Если ничего не получилось, возвращаем минимальные значения
+                    if (bbox.width === 0 && bbox.height === 0) {
+                        bbox.width = 100;
+                        bbox.height = 100;
+                    }
+                } catch (e) {
+                    // В случае ошибки возвращаем значения по умолчанию
+                    bbox.width = 100;
+                    bbox.height = 100;
+                }
+                
+                return bbox;
+            }
+            
+            // Добавляем полифилл для всех SVG элементов
+            var svgElementTypes = ['SVGElement', 'SVGTextElement', 'SVGRectElement', 'SVGPathElement', 
+                                  'SVGCircleElement', 'SVGEllipseElement', 'SVGLineElement', 'SVGPolygonElement',
+                                  'SVGPolylineElement', 'SVGGElement', 'SVGUseElement'];
+            
+            svgElementTypes.forEach(function(typeName) {
+                if (typeof window[typeName] !== 'undefined' && window[typeName].prototype) {
+                    if (!window[typeName].prototype.getBBox || typeof window[typeName].prototype.getBBox !== 'function') {
+                        window[typeName].prototype.getBBox = getBBoxPolyfill;
+                    }
+                }
+            });
+            
+            // Также добавляем для всех элементов, которые могут быть SVG (на всякий случай)
+            if (typeof Element !== 'undefined' && Element.prototype) {
+                // Перехватываем getBBox на любых элементах, которые могут быть SVG
+                var originalGetBBox = Element.prototype.getBBox;
+                if (!originalGetBBox || typeof originalGetBBox !== 'function') {
+                    Element.prototype.getBBox = function() {
+                        // Проверяем, является ли элемент SVG элементом
+                        if (this.namespaceURI === 'http://www.w3.org/2000/svg' || this.tagName && this.tagName.toLowerCase().indexOf('svg') !== -1) {
+                            return getBBoxPolyfill.call(this);
+                        }
+                        // Если не SVG, возвращаем значения по умолчанию
+                        return { x: 0, y: 0, width: 100, height: 100 };
+                    };
+                }
+            }
+        })();
+    </script>
+    
+    <!-- Транспилированный бандл Mermaid для 1С (включает все необходимые полифиллы) -->
+    <!-- Версия 11.12.2 - переименован для обхода кэша браузера -->
+    <script src="dist/mermaid_all_in_one_v11.12.2.js"></script>
+    
+    <script>
+        // Инициализация Mermaid после загрузки скрипта
+        // Mermaid уже инициализирован с startOnLoad: true, но вызываем run() для надежности
+        (function() {
+            'use strict';
+            
+            function initMermaid() {
+                try {
+                    // Проверка доступности mermaid
+                    if (typeof window === 'undefined' || !window.mermaid) {
+                        console.warn('Mermaid не найден, повторная попытка через 200ms...');
+                        setTimeout(initMermaid, 200);
+                        return;
+                    }
+                    
+                    console.log('Mermaid найден');
+                    
+                    // Используем стандартный mermaid.run() для обработки всех диаграмм
+                    if (typeof window.mermaid.run === 'function') {
+                        console.log('Вызываем mermaid.run()');
+                        try {
+                            var runPromise = window.mermaid.run();
+                            if (runPromise && typeof runPromise.then === 'function') {
+                                runPromise.then(function() {
+                                    console.log('Mermaid.run() выполнен успешно');
+                                    var svgElements = document.querySelectorAll('.mermaid svg');
+                                    console.log('Создано SVG элементов:', svgElements.length);
+                                }).catch(function(err) {
+                                    console.error('Ошибка при выполнении mermaid.run():', err);
+                                });
+                            }
+                        } catch (err) {
+                            console.error('Ошибка при вызове mermaid.run():', err);
+                        }
+                    } else {
+                        console.log('mermaid.run() не найден, диаграммы должны обработаться автоматически');
+                    }
+                } catch (e) {
+                    console.error('Ошибка при инициализации Mermaid:', e);
+                }
+            }
+            
+            // Запуск инициализации после загрузки DOM
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    setTimeout(initMermaid, 100);
+                });
+            } else {
+                setTimeout(initMermaid, 100);
+            }
+        })();
+    </script>
+</body>
+</html>

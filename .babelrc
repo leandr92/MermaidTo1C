@@ -1,0 +1,23 @@
+{
+  "presets": [
+    [
+      "@babel/preset-env",
+      {
+        "targets": {
+          "ie": "11"
+        },
+        "useBuiltIns": "entry",
+        "corejs": {
+          "version": 3,
+          "proposals": false
+        },
+        "modules": false,
+        "debug": false,
+        "forceAllTransforms": true,
+        "shippedProposals": false
+      }
+    ]
+  ],
+  "plugins": []
+}
+
