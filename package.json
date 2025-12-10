@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "rollup -c",
-    "build:watch": "rollup -c --watch",
-    "build:webpack": "webpack --config webpack.config.cjs"
+    "build:watch": "rollup -c --watch"
   },
   "keywords": [
     "mermaid",
@@ -23,15 +22,10 @@
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",
-    "@babel/plugin-transform-regenerator": "^7.28.4",
-    "@babel/plugin-transform-template-literals": "^7.27.1",
     "@babel/preset-env": "^7.26.0",
     "@rollup/plugin-babel": "^6.0.4",
     "@rollup/plugin-commonjs": "^28.0.1",
     "@rollup/plugin-node-resolve": "^15.3.0",
-    "babel-loader": "^9.2.1",
-    "rollup": "^4.24.0",
-    "webpack": "^5.103.0",
-    "webpack-cli": "^5.1.4"
+    "rollup": "^4.24.0"
   }
 }

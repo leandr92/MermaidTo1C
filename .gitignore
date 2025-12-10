@@ -4,8 +4,11 @@ package-lock.json
 yarn.lock
 
 # Build output
-dist/
+dist/mermaid_all_in_one.js
 *.log
+
+# Версионированные файлы можно коммитить (для обхода кэша)
+# dist/mermaid_all_in_one_v*.js
 
 # OS files
 .DS_Store
