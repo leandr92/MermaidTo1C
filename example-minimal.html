@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Mermaid - Минимальный пример</title>
+</head>
+<body>
+    <h1>Пример диаграммы Mermaid</h1>
+    
+    <!-- Диаграмма с угловатыми линиями (ELK) -->
+    <pre class="mermaid">flowchart-elk TD
+A[Начало] --> B[Процесс]
+B --> C[Конец]</pre>
+
+    <!-- КРИТИЧЕСКИ ВАЖНО: Полифиллы ДО загрузки mermaid -->
+    <script>
+        // Полифилл для Object.hasOwn (ES2022)
+        if (typeof Object.hasOwn === 'undefined') {
+            Object.hasOwn = function(obj, prop) {
+                return Object.prototype.hasOwnProperty.call(obj, prop);
+            };
+        }
+        
+        // Полифилл для Array.prototype.at() (ES2022)
+        if (!Array.prototype.at) {
+            Array.prototype.at = function(index) {
+                var len = this.length;
+                var relativeIndex = index >= 0 ? index : len + index;
+                if (relativeIndex < 0 || relativeIndex >= len) {
+                    return undefined;
+                }
+                return this[relativeIndex];
+            };
+        }
+        
+        // Полифилл для SVGElement.getBBox()
+        (function() {
+            function getBBoxPolyfill() {
+                var element = this;
+                if (element && typeof element.node === 'function') {
+                    element = element.node();
+                }
+                if (!element) {
+                    return { x: 0, y: 0, width: 100, height: 100 };
+                }
+                if (element.getBBox && typeof element.getBBox === 'function') {
+                    try {
+                        return element.getBBox();
+                    } catch (e) {}
+                }
+                var bbox = { x: 0, y: 0, width: 0, height: 0 };
+                try {
+                    if (element.getBoundingClientRect) {
+                        var rect = element.getBoundingClientRect();
+                        bbox.width = rect.width || 0;
+                        bbox.height = rect.height || 0;
+                    }
+                    if (element.getAttribute) {
+                        var width = element.getAttribute('width');
+                        var height = element.getAttribute('height');
+                        if (width) bbox.width = parseFloat(width) || bbox.width;
+                        if (height) bbox.height = parseFloat(height) || bbox.height;
+                    }
+                    if (bbox.width === 0 && bbox.height === 0) {
+                        bbox.width = 100;
+                        bbox.height = 100;
+                    }
+                } catch (e) {
+                    bbox.width = 100;
+                    bbox.height = 100;
+                }
+                return bbox;
+            }
+            var svgElementTypes = ['SVGElement', 'SVGTextElement', 'SVGRectElement', 'SVGPathElement', 
+                                  'SVGCircleElement', 'SVGEllipseElement', 'SVGLineElement', 'SVGPolygonElement',
+                                  'SVGPolylineElement', 'SVGGElement', 'SVGUseElement'];
+            svgElementTypes.forEach(function(typeName) {
+                if (typeof window[typeName] !== 'undefined' && window[typeName].prototype) {
+                    if (!window[typeName].prototype.getBBox || typeof window[typeName].prototype.getBBox !== 'function') {
+                        window[typeName].prototype.getBBox = getBBoxPolyfill;
+                    }
+                }
+            });
+            if (typeof Element !== 'undefined' && Element.prototype) {
+                var originalGetBBox = Element.prototype.getBBox;
+                if (!originalGetBBox || typeof originalGetBBox !== 'function') {
+                    Element.prototype.getBBox = function() {
+                        if (this.namespaceURI === 'http://www.w3.org/2000/svg' || this.tagName && this.tagName.toLowerCase().indexOf('svg') !== -1) {
+                            return getBBoxPolyfill.call(this);
+                        }
+                        return { x: 0, y: 0, width: 100, height: 100 };
+                    };
+                }
+            }
+        })();
+    </script>
+    
+    <!-- Подключение транспилированного Mermaid -->
+    <script src="dist/mermaid_all_in_one_v11.12.2.js"></script>
+    
+    <!-- Mermaid автоматически обработает все элементы с классом .mermaid -->
+    <!-- При необходимости можно вызвать вручную: -->
+    <script>
+        // Опционально: явный вызов для надежности
+        if (window.mermaid && window.mermaid.run) {
+            window.mermaid.run();
+        }
+    </script>
+</body>
+</html>
+

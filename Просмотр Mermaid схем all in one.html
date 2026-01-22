@@ -114,8 +114,16 @@
     <h1>Mermaid Схемы</h1>
     
     <div id="mermaid-container">
-        <!-- Основная диаграмма с кириллицей -->
-        <pre class="mermaid">graph TD
+        <!-- Основная диаграмма с кириллицей - используем flowchart-elk для угловатых линий -->
+        <pre class="mermaid">flowchart-elk TD
+A[Клиент] --> B[Балансировщик нагрузки]
+B --> C[Сервер1]
+B --> D[Сервер2]
+C --> E[База данных]
+D --> E</pre>
+
+        <!-- Альтернативный вариант с обычным graph для сравнения -->
+        <pre class="mermaid" data-diagram-type="graph">graph TD
 A[Клиент] --> B[Балансировщик нагрузки]
 B --> C[Сервер1]
 B --> D[Сервер2]
@@ -270,48 +278,173 @@ Bob-->>Alice: I am good thanks!</pre>
         (function() {
             'use strict';
             
+            // Функция для детального анализа SVG элементов после отрисовки
+            function analyzeSVGElements() {
+                console.log('=== HTML DEBUG: Анализ SVG элементов ===');
+                var svgElements = document.querySelectorAll('.mermaid svg');
+                console.log('HTML DEBUG: Найдено SVG элементов:', svgElements.length);
+                
+                svgElements.forEach(function(svg, index) {
+                    console.log('HTML DEBUG: --- SVG #' + index + ' ---');
+                    
+                    // Получаем родительский элемент с классом mermaid
+                    var mermaidElement = svg.closest('.mermaid');
+                    var diagramText = mermaidElement ? mermaidElement.textContent.trim() : 'N/A';
+                    var diagramType = diagramText.split('\n')[0] || diagramText.substring(0, 50);
+                    console.log('HTML DEBUG: Тип диаграммы:', diagramType);
+                    
+                    // Проверяем размеры
+                    console.log('HTML DEBUG: Размеры SVG:', {
+                        width: svg.getAttribute('width'),
+                        height: svg.getAttribute('height'),
+                        viewBox: svg.getAttribute('viewBox')
+                    });
+                    
+                    // Проверяем классы
+                    var svgClasses = svg.getAttribute('class') || '';
+                    console.log('HTML DEBUG: Классы SVG:', svgClasses);
+                    
+                    // Анализируем пути (paths) - ключевой момент для определения типа линий
+                    var paths = svg.querySelectorAll('path');
+                    console.log('HTML DEBUG: Количество path элементов:', paths.length);
+                    
+                    var curvedPaths = 0;
+                    var straightPaths = 0;
+                    var mixedPaths = 0;
+                    
+                    paths.forEach(function(path, pathIndex) {
+                        var d = path.getAttribute('d') || '';
+                        if (!d) return;
+                        
+                        // Команды для кривых: C (cubic bezier), S (smooth cubic), Q (quadratic), T (smooth quadratic)
+                        var hasCurves = /[CcSsQqTt]/.test(d);
+                        // Команды для прямых: L (line), H (horizontal), V (vertical), Z (close path)
+                        var hasLines = /[LlHhVvZz]/.test(d);
+                        // Команда M (move) не считается ни кривой, ни линией
+                        var isOnlyMove = /^[Mm\s\d.,-]+$/.test(d.replace(/[LlHhVvZzCcSsQqTt]/g, ''));
+                        
+                        if (hasCurves && !hasLines && !isOnlyMove) {
+                            curvedPaths++;
+                        } else if (hasLines && !hasCurves) {
+                            straightPaths++;
+                        } else if (hasCurves && hasLines) {
+                            mixedPaths++;
+                        }
+                        
+                        // Логируем первые несколько путей детально
+                        if (pathIndex < 3) {
+                            console.log('HTML DEBUG: Path #' + pathIndex + ':');
+                            console.log('  - d атрибут (первые 150 символов):', d.substring(0, 150));
+                            console.log('  - Содержит кривые?', hasCurves);
+                            console.log('  - Содержит прямые линии?', hasLines);
+                            console.log('  - Тип линии:', hasCurves && !hasLines ? 'СКРУГЛЕННАЯ (кривая)' : 
+                                                     hasLines && !hasCurves ? 'УГЛОВАТАЯ (прямая)' : 
+                                                     'СМЕШАННАЯ');
+                        }
+                    });
+                    
+                    console.log('HTML DEBUG: Статистика путей:');
+                    console.log('  - Скругленные (только кривые):', curvedPaths);
+                    console.log('  - Угловатые (только прямые):', straightPaths);
+                    console.log('  - Смешанные:', mixedPaths);
+                    
+                    if (curvedPaths > 0 && straightPaths === 0) {
+                        console.warn('HTML DEBUG: ⚠️ ВНИМАНИЕ: Все пути скругленные - ELK может не работать!');
+                    } else if (straightPaths > 0) {
+                        console.log('HTML DEBUG: ✅ Найдены угловатые пути - ELK работает корректно');
+                    }
+                    
+                    // Проверяем наличие групп с классами, указывающими на renderer
+                    var groups = svg.querySelectorAll('g');
+                    var elkGroups = 0;
+                    groups.forEach(function(group) {
+                        var groupClass = group.getAttribute('class') || '';
+                        if (groupClass.indexOf('elk') !== -1 || groupClass.indexOf('orthogonal') !== -1) {
+                            elkGroups++;
+                        }
+                    });
+                    console.log('HTML DEBUG: Групп с признаками ELK:', elkGroups);
+                });
+                
+                console.log('=== HTML DEBUG: Анализ завершен ===');
+            }
+            
             function initMermaid() {
                 try {
                     // Проверка доступности mermaid
                     if (typeof window === 'undefined' || !window.mermaid) {
-                        console.warn('Mermaid не найден, повторная попытка через 200ms...');
+                        console.warn('HTML DEBUG: Mermaid не найден, повторная попытка через 200ms...');
                         setTimeout(initMermaid, 200);
                         return;
                     }
                     
-                    console.log('Mermaid найден');
+                    console.log('HTML DEBUG: === Инициализация Mermaid ===');
+                    console.log('HTML DEBUG: Mermaid найден:', window.mermaid);
+                    
+                    // Проверяем конфигурацию
+                    if (window.mermaid.getConfig) {
+                        try {
+                            var config = window.mermaid.getConfig();
+                            console.log('HTML DEBUG: Текущая конфигурация:', JSON.stringify(config, null, 2));
+                            if (config.flowchart) {
+                                console.log('HTML DEBUG: flowchart.defaultRenderer:', config.flowchart.defaultRenderer);
+                                if (config.flowchart.defaultRenderer !== 'elk') {
+                                    console.warn('HTML DEBUG: ⚠️ defaultRenderer не установлен в "elk"!');
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('HTML DEBUG: Не удалось получить конфигурацию:', e);
+                        }
+                    }
                     
                     // Используем стандартный mermaid.run() для обработки всех диаграмм
                     if (typeof window.mermaid.run === 'function') {
-                        console.log('Вызываем mermaid.run()');
+                        console.log('HTML DEBUG: Вызываем mermaid.run()');
                         try {
                             var runPromise = window.mermaid.run();
                             if (runPromise && typeof runPromise.then === 'function') {
                                 runPromise.then(function() {
-                                    console.log('Mermaid.run() выполнен успешно');
-                                    var svgElements = document.querySelectorAll('.mermaid svg');
-                                    console.log('Создано SVG элементов:', svgElements.length);
+                                    console.log('HTML DEBUG: ✅ Mermaid.run() выполнен успешно');
+                                    
+                                    // Даем время на отрисовку, затем анализируем
+                                    setTimeout(function() {
+                                        analyzeSVGElements();
+                                    }, 500);
                                 }).catch(function(err) {
-                                    console.error('Ошибка при выполнении mermaid.run():', err);
+                                    console.error('HTML DEBUG: ❌ Ошибка при выполнении mermaid.run():', err);
+                                    console.error('HTML DEBUG: Стек ошибки:', err.stack);
                                 });
+                            } else {
+                                // Если run() не вернул Promise, анализируем через некоторое время
+                                setTimeout(function() {
+                                    analyzeSVGElements();
+                                }, 1000);
                             }
                         } catch (err) {
-                            console.error('Ошибка при вызове mermaid.run():', err);
+                            console.error('HTML DEBUG: ❌ Ошибка при вызове mermaid.run():', err);
+                            console.error('HTML DEBUG: Стек ошибки:', err.stack);
                         }
                     } else {
-                        console.log('mermaid.run() не найден, диаграммы должны обработаться автоматически');
+                        console.log('HTML DEBUG: mermaid.run() не найден, диаграммы должны обработаться автоматически');
+                        // Анализируем через некоторое время
+                        setTimeout(function() {
+                            analyzeSVGElements();
+                        }, 2000);
                     }
                 } catch (e) {
-                    console.error('Ошибка при инициализации Mermaid:', e);
+                    console.error('HTML DEBUG: ❌ Ошибка при инициализации Mermaid:', e);
+                    console.error('HTML DEBUG: Стек ошибки:', e.stack);
                 }
             }
             
             // Запуск инициализации после загрузки DOM
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', function() {
+                    console.log('HTML DEBUG: DOM загружен, запускаем инициализацию...');
                     setTimeout(initMermaid, 100);
                 });
             } else {
+                console.log('HTML DEBUG: DOM уже загружен, запускаем инициализацию...');
                 setTimeout(initMermaid, 100);
             }
         })();
